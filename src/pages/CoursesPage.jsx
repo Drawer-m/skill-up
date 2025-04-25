@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; 
 import React from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import { 
   Box, 
   Container, 
@@ -20,126 +21,43 @@ import {
   Avatar,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import CodeIcon from '@mui/icons-material/Code';
-import MusicNoteIcon from '@mui/icons-material/MusicNote';
-import BrushIcon from '@mui/icons-material/Brush';
-import SportsBasketballIcon from '@mui/icons-material/SportsBasketball';
-import PhoneAndroidIcon from '@mui/icons-material/PhoneAndroid';
-import DataObjectIcon from '@mui/icons-material/DataObject';
-import PianoIcon from '@mui/icons-material/Piano';
-import ColorLensIcon from '@mui/icons-material/ColorLens';
-
-// Modified courses data to include icons
-const courses = [
-  {
-    id: 1,
-    title: 'Web Development Fundamentals',
-    teacher: 'Alex Johnson',
-    price: 29.99,
-    category: 'coding',
-    iconType: 'code',
-  },
-  {
-    id: 2,
-    title: 'Guitar for Beginners',
-    teacher: 'Maria Garcia',
-    price: 24.99,
-    category: 'music',
-    iconType: 'music',
-  },
-  {
-    id: 3,
-    title: 'Digital Illustration Techniques',
-    teacher: 'Sam Lee',
-    price: 19.99,
-    category: 'art',
-    iconType: 'art',
-  },
-  {
-    id: 4,
-    title: 'Mobile App Development',
-    teacher: 'Jane Smith',
-    price: 34.99,
-    category: 'coding',
-    iconType: 'mobile',
-  },
-  {
-    id: 5,
-    title: 'Modern Dance Fundamentals',
-    teacher: 'Michael Brown',
-    price: 22.99,
-    category: 'dance',
-    iconType: 'dance',
-  },
-  {
-    id: 6,
-    title: 'Oil Painting Masterclass',
-    teacher: 'Emma Wilson',
-    price: 29.99,
-    category: 'art',
-    iconType: 'painting',
-  },
-  {
-    id: 7,
-    title: 'Piano for Intermediates',
-    teacher: 'David Miller',
-    price: 27.99,
-    category: 'music',
-    iconType: 'piano',
-  },
-  {
-    id: 8,
-    title: 'Python Data Science',
-    teacher: 'Lisa Chen',
-    price: 39.99,
-    category: 'coding',
-    iconType: 'data',
-  },
-];
-
-const categories = [
-  { value: 'all', label: 'All Categories' },
-  { value: 'coding', label: 'Coding' },
-  { value: 'music', label: 'Music' },
-  { value: 'art', label: 'Art' },
-  { value: 'dance', label: 'Dance' },
-];
+import { courses, categories, renderCourseIcon, getEnrolledCourses } from '../data/courses.jsx'; 
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'; 
 
 const CoursesPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('all');
+  const [dataVersion, setDataVersion] = useState(0); 
 
-  // Render the correct icon based on the course's iconType
-  const renderCourseIcon = (iconType, size = 60) => {
-    switch(iconType) {
-      case 'code':
-        return <CodeIcon sx={{ fontSize: size, color: 'background.paper' }} />;
-      case 'music':
-        return <MusicNoteIcon sx={{ fontSize: size, color: 'background.paper' }} />;
-      case 'art':
-        return <BrushIcon sx={{ fontSize: size, color: 'background.paper' }} />;
-      case 'dance':
-        return <SportsBasketballIcon sx={{ fontSize: size, color: 'background.paper' }} />;
-      case 'mobile':
-        return <PhoneAndroidIcon sx={{ fontSize: size, color: 'background.paper' }} />;
-      case 'painting':
-        return <ColorLensIcon sx={{ fontSize: size, color: 'background.paper' }} />;
-      case 'piano':
-        return <PianoIcon sx={{ fontSize: size, color: 'background.paper' }} />;
-      case 'data':
-        return <DataObjectIcon sx={{ fontSize: size, color: 'background.paper' }} />;
-      default:
-        return <CodeIcon sx={{ fontSize: size, color: 'background.paper' }} />;
-    }
-  };
+  useEffect(() => {
+    const handleDataChange = () => {
+      setDataVersion(prev => prev + 1); 
+    };
+    window.addEventListener('enrollmentChanged', handleDataChange);
+    window.addEventListener('coursesUpdated', handleDataChange); 
+    
+    return () => {
+      window.removeEventListener('enrollmentChanged', handleDataChange);
+      window.removeEventListener('coursesUpdated', handleDataChange);
+    };
+  }, []);
 
-  // Filter courses based on search term and category
-  const filteredCourses = courses.filter(course => {
-    const matchesSearch = course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         course.teacher.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = category === 'all' || course.category === category;
-    return matchesSearch && matchesCategory;
-  });
+  const enrolledIds = getEnrolledCourses();
+
+  const filteredCourses = courses
+    .filter(course => {
+      const matchesSearch = course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           course.teacher.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = category === 'all' || course.category === category;
+      return matchesSearch && matchesCategory;
+    })
+    .sort((a, b) => {
+      const aEnrolled = enrolledIds.includes(a.id);
+      const bEnrolled = enrolledIds.includes(b.id);
+      if (aEnrolled && !bEnrolled) return -1; 
+      if (!aEnrolled && bEnrolled) return 1;  
+      return a.id - b.id; 
+    });
 
   return (
     <Box sx={{ py: 8, borderColor: 'divider' }}>
@@ -148,7 +66,6 @@ const CoursesPage = () => {
           Available Courses
         </Typography>
 
-        {/* Search and Filter */}
         <Box 
           sx={{ 
             mb: 6, 
@@ -235,105 +152,130 @@ const CoursesPage = () => {
           </Grid>
         </Box>
 
-        {/* Course Grid */}
         {filteredCourses.length > 0 ? (
           <Grid container spacing={4}>
-            {filteredCourses.map((course) => (
-              <Grid item key={course.id} xs={12} sm={6} md={4} lg={3}>
-                <Card 
-                  sx={{ 
-                    height: '100%', 
-                    display: 'flex', 
-                    flexDirection: 'column',
-                    transition: '0.3s',
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    borderRadius: 2,
-                    overflow: 'hidden',
-                    '&:hover': {
-                      transform: 'translateY(-5px)',
-                      boxShadow: 3,
-                      borderColor: 'primary.light',
-                    }
-                  }}
-                >
-                  <Box sx={{ 
-                    bgcolor: course.category === 'coding' ? 'primary.dark' : 
-                             course.category === 'art' ? 'secondary.dark' : 
-                             course.category === 'music' ? 'info.dark' : 'success.dark',
-                    p: 3,
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    borderBottom: '1px solid',
-                    borderColor: 'divider',
-                  }}>
-                    {renderCourseIcon(course.iconType, 60)}
-                  </Box>
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Typography gutterBottom variant="h6" component="h2">
-                      {course.title}
-                    </Typography>
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-                      <Avatar 
+            {filteredCourses.map((course) => {
+              const enrolled = enrolledIds.includes(course.id);
+              const categoryColor = course.category === 'coding' ? 'primary.dark' : 
+                                    course.category === 'art' ? 'secondary.dark' : 
+                                    course.category === 'music' ? 'info.dark' : 'success.dark';
+              
+              return (
+                <Grid item key={course.id} xs={12} sm={6} md={4} lg={3}>
+                  <Card 
+                    sx={{ 
+                      height: '100%', 
+                      display: 'flex', 
+                      flexDirection: 'column',
+                      transition: '0.3s',
+                      border: '1px solid',
+                      borderColor: enrolled ? 'success.main' : 'divider', 
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                      position: 'relative', 
+                      bgcolor: enrolled ? 'success.lightest' : 'background.paper', 
+                      '&:hover': {
+                        transform: 'translateY(-5px)',
+                        boxShadow: 3,
+                        borderColor: enrolled ? 'success.dark' : 'primary.light',
+                      }
+                    }}
+                  >
+                    {enrolled && (
+                      <Chip 
+                        icon={<CheckCircleIcon fontSize="small" />}
+                        label="Enrolled" 
+                        size="small" 
+                        color="success"
                         sx={{ 
-                          width: 24, 
-                          height: 24, 
-                          fontSize: '0.75rem',
-                          bgcolor: 'primary.dark',
+                          position: 'absolute', 
+                          top: 8, 
+                          right: 8, 
+                          zIndex: 1,
+                          bgcolor: 'success.main',
+                          color: 'white',
+                          '.MuiChip-icon': { color: 'white' }
+                        }} 
+                      />
+                    )}
+                    <Box sx={{ 
+                      bgcolor: categoryColor,
+                      p: 3,
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      borderBottom: '1px solid',
+                      borderColor: 'divider',
+                    }}>
+                      {renderCourseIcon(course.iconType, 60)}
+                    </Box>
+                    <CardContent sx={{ flexGrow: 1 }}>
+                      <Typography gutterBottom variant="h6" component="h2">
+                        {course.title}
+                      </Typography>
+                      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+                        <Avatar 
+                          sx={{ 
+                            width: 24, 
+                            height: 24, 
+                            fontSize: '0.75rem',
+                            bgcolor: 'primary.dark',
+                            border: '1px solid',
+                            borderColor: 'divider',
+                          }}
+                        >
+                          {course.teacher.charAt(0)}
+                        </Avatar>
+                        <Typography variant="body2" color="text.secondary">
+                          {course.teacher}
+                        </Typography>
+                      </Stack>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Chip 
+                          label={course.category.charAt(0).toUpperCase() + course.category.slice(1)} 
+                          size="small" 
+                          variant="outlined"
+                          sx={{
+                            border: '1px solid',
+                            borderColor: course.category === 'coding' ? 'primary.dark' : 
+                                        course.category === 'art' ? 'secondary.dark' : 
+                                        course.category === 'music' ? 'info.dark' :
+                                        'success.dark',
+                            color: course.category === 'coding' ? 'primary.dark' : 
+                                   course.category === 'art' ? 'secondary.dark' : 
+                                   course.category === 'music' ? 'info.dark' :
+                                   'success.dark',
+                          }}
+                        />
+                        <Typography variant="h6" color="primary.dark">
+                          ${course.price}
+                        </Typography>
+                      </Box>
+                    </CardContent>
+                    <CardActions sx={{ borderTop: '1px solid', borderColor: 'divider', p: 2 }}>
+                      <Button 
+                        fullWidth 
+                        variant="contained" 
+                        size="medium"
+                        component={RouterLink}
+                        to={`/courses/${course.id}`}
+                        sx={{
+                          bgcolor: enrolled ? 'success.dark' : 'primary.dark',
                           border: '1px solid',
-                          borderColor: 'divider',
+                          borderColor: enrolled ? 'success.dark' : 'primary.dark',
+                          '&:hover': {
+                            bgcolor: enrolled ? 'success.main' : 'primary.main',
+                            borderColor: enrolled ? 'success.main' : 'primary.main',
+                          }
                         }}
                       >
-                        {course.teacher.charAt(0)}
-                      </Avatar>
-                      <Typography variant="body2" color="text.secondary">
-                        {course.teacher}
-                      </Typography>
-                    </Stack>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Chip 
-                        label={course.category.charAt(0).toUpperCase() + course.category.slice(1)} 
-                        size="small" 
-                        variant="outlined"
-                        sx={{
-                          border: '1px solid',
-                          borderColor: course.category === 'coding' ? 'primary.dark' : 
-                                      course.category === 'art' ? 'secondary.dark' : 
-                                      course.category === 'music' ? 'info.dark' :
-                                      'success.dark',
-                          color: course.category === 'coding' ? 'primary.dark' : 
-                                 course.category === 'art' ? 'secondary.dark' : 
-                                 course.category === 'music' ? 'info.dark' :
-                                 'success.dark',
-                        }}
-                      />
-                      <Typography variant="h6" color="primary.dark">
-                        ${course.price}
-                      </Typography>
-                    </Box>
-                  </CardContent>
-                  <CardActions sx={{ borderTop: '1px solid', borderColor: 'divider', p: 2 }}>
-                    <Button 
-                      fullWidth 
-                      variant="contained" 
-                      size="medium"
-                      sx={{
-                        bgcolor: 'primary.dark',
-                        border: '1px solid',
-                        borderColor: 'primary.dark',
-                        '&:hover': {
-                          bgcolor: 'primary.main',
-                          borderColor: 'primary.main',
-                        }
-                      }}
-                    >
-                      Enroll Now
-                    </Button>
-                  </CardActions>
-                </Card>
-              </Grid>
-            ))}
+                        {enrolled ? 'View Course' : 'View Details'}
+                      </Button>
+                    </CardActions>
+                  </Card>
+                </Grid>
+              );
+            })}
           </Grid>
         ) : (
           <Box sx={{ py: 4, textAlign: 'center', border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 3 }}>

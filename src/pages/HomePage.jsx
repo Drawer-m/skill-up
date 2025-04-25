@@ -17,6 +17,7 @@ import SportsBasketballIcon from '@mui/icons-material/SportsBasketball';
 import SchoolIcon from '@mui/icons-material/School';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import GroupIcon from '@mui/icons-material/Group';
+import { useAuth } from '../context/AuthContext';
 
 const features = [
   {
@@ -42,6 +43,8 @@ const features = [
 ];
 
 const HomePage = () => {
+  const { user } = useAuth();
+
   return (
     <Box>
       {/* Hero Section */}
@@ -71,15 +74,18 @@ const HomePage = () => {
                 >
                   Explore Courses
                 </Button>
-                <Button 
-                  variant="outlined" 
-                  size="large" 
-                  component={RouterLink}
-                  to="/teach"
-                  startIcon={<SchoolIcon />}
-                >
-                  Become a Teacher
-                </Button>
+                {/* Conditionally render the "Become a Teacher" button */}
+                {user?.role !== 'teacher' && (
+                  <Button 
+                    variant="outlined" 
+                    size="large" 
+                    component={RouterLink}
+                    to="/teach"
+                    startIcon={<SchoolIcon />}
+                  >
+                    Become a Teacher
+                  </Button>
+                )}
               </Stack>
             </Grid>
             <Grid item xs={12} md={6} sx={{ display: 'flex', justifyContent: 'center' }}>
@@ -129,7 +135,7 @@ const HomePage = () => {
                   {feature.icon}
                 </Box>
                 <CardContent sx={{ flexGrow: 1 }}>
-                  <Typography gutterBottom variant="h5" component="h3" textAlign="center">
+                  <Typography gutterBottom variant="h5" component="h3" color="text.primary">
                     {feature.title}
                   </Typography>
                   <Typography textAlign="center">
