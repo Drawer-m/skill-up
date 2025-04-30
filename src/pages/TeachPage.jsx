@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { 
-  Box, 
-  Container, 
-  Typography, 
-  Grid, 
-  TextField, 
-  Button, 
+import { useState, useEffect, useRef } from 'react'; // Import hooks
+import {
+  Box,
+  Container,
+  Typography,
+  Grid,
+  TextField,
+  Button,
   FormControl,
   InputLabel,
   Select,
@@ -30,6 +30,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import LinkIcon from '@mui/icons-material/Link';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import EmailIcon from '@mui/icons-material/Email';
+import gsap from 'gsap'; // Import gsap
 
 const skills = [
   'Web Development',
@@ -60,17 +61,43 @@ const TeachPage = () => {
     bio: '',
     sampleUrl: '',
   });
-  
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
-  
+
+  // Refs for animations
+  const formRef = useRef(null);
+  const whyTeachRef = useRef(null);
+  const titleRef = useRef(null);
+
+  // Animation Effect
+  useEffect(() => {
+    const tl = gsap.timeline({ defaults: { ease: 'power3.out', duration: 0.7 } });
+    const formElements = formRef.current ? formRef.current.querySelectorAll('.MuiGrid-item > .MuiBox-root') : []; // Target inner boxes
+
+    // Initial states
+    gsap.set(titleRef.current, { autoAlpha: 0, y: -30 });
+    gsap.set(formRef.current, { autoAlpha: 0, y: 50 });
+    gsap.set(whyTeachRef.current, { autoAlpha: 0, x: 50 });
+    gsap.set(formElements, { autoAlpha: 0, y: 20 }); // Initial state for form fields
+
+    // Animation sequence
+    tl.to(titleRef.current, { autoAlpha: 1, y: 0, duration: 0.6, delay: 0.1 })
+      .to(formRef.current, { autoAlpha: 1, y: 0, duration: 0.8 }, "-=0.4")
+      .to(formElements, { autoAlpha: 1, y: 0, stagger: 0.1 }, "-=0.6") // Stagger form fields
+      .to(whyTeachRef.current, { autoAlpha: 1, x: 0, duration: 0.8 }, "-=0.7");
+
+    return () => {
+      tl.kill();
+    };
+  }, []);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
       [name]: value
     });
-    
+
     // Clear error when field is edited
     if (errors[name]) {
       setErrors({
@@ -79,35 +106,35 @@ const TeachPage = () => {
       });
     }
   };
-  
+
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!formData.fullName.trim()) newErrors.fullName = 'Name is required';
-    
+
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email is invalid';
     }
-    
+
     if (!formData.skill) newErrors.skill = 'Skill selection is required';
     if (!formData.experience.trim()) newErrors.experience = 'Experience details are required';
     if (!formData.availability.trim()) newErrors.availability = 'Availability information is required';
     if (!formData.bio.trim()) newErrors.bio = 'Bio is required';
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     if (validateForm()) {
       // In a real app, this would send the data to a server
       console.log('Form submitted:', formData);
       setSubmitted(true);
-      
+
       // Reset form after successful submission
       setFormData({
         fullName: '',
@@ -120,17 +147,17 @@ const TeachPage = () => {
       });
     }
   };
-  
+
   const handleCloseSnackbar = () => {
     setSubmitted(false);
   };
 
   return (
-    <Box sx={{ py: 8 }}>
+    <Box sx={{ py: 8, overflow: 'hidden' }}> {/* Added overflow hidden */}
       <Container maxWidth="lg">
         <Grid container spacing={4}>
           <Grid item xs={12} md={7}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <Box ref={titleRef} sx={{ display: 'flex', alignItems: 'center', mb: 2, visibility: 'hidden' }}> {/* Add ref & start hidden */}
               <SchoolIcon fontSize="large" color="primary" sx={{ mr: 2 }} />
               <Typography variant="h3" component="h1" gutterBottom>
                 Become a Teacher
@@ -139,10 +166,11 @@ const TeachPage = () => {
             <Typography variant="h6" color="text.secondary" paragraph>
               Share your skills with our community and earn while making a difference.
             </Typography>
-            
-            <Paper sx={{ p: 4, mt: 4 }} elevation={2}>
+
+            <Paper ref={formRef} sx={{ p: 4, mt: 4, visibility: 'hidden' }} elevation={2}> {/* Add ref & start hidden */}
               <form onSubmit={handleSubmit}>
                 <Grid container spacing={3}>
+                  {/* Wrap each form field group in a Grid item for staggering */}
                   <Grid item xs={12}>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
                       <PersonIcon color="primary" sx={{ mr: 1, mt: 1 }} />
@@ -158,7 +186,7 @@ const TeachPage = () => {
                       />
                     </Box>
                   </Grid>
-                  
+
                   <Grid item xs={12}>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
                       <EmailIcon color="primary" sx={{ mr: 1, mt: 1 }} />
@@ -175,7 +203,7 @@ const TeachPage = () => {
                       />
                     </Box>
                   </Grid>
-                  
+
                   <Grid item xs={12}>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
                       <StarIcon color="primary" sx={{ mr: 1, mt: 1 }} />
@@ -195,7 +223,7 @@ const TeachPage = () => {
                       </FormControl>
                     </Box>
                   </Grid>
-                  
+
                   <Grid item xs={12}>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
                       <StarIcon color="primary" sx={{ mr: 1, mt: 1 }} />
@@ -212,7 +240,7 @@ const TeachPage = () => {
                       />
                     </Box>
                   </Grid>
-                  
+
                   <Grid item xs={12}>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
                       <AccessTimeIcon color="primary" sx={{ mr: 1, mt: 1 }} />
@@ -229,7 +257,7 @@ const TeachPage = () => {
                       />
                     </Box>
                   </Grid>
-                  
+
                   <Grid item xs={12}>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
                       <PersonIcon color="primary" sx={{ mr: 1, mt: 1 }} />
@@ -248,7 +276,7 @@ const TeachPage = () => {
                       />
                     </Box>
                   </Grid>
-                  
+
                   <Grid item xs={12}>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
                       <LinkIcon color="primary" sx={{ mr: 1, mt: 1 }} />
@@ -262,7 +290,7 @@ const TeachPage = () => {
                       />
                     </Box>
                   </Grid>
-                  
+
                   <Grid item xs={12}>
                     <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                       <Button
@@ -280,9 +308,9 @@ const TeachPage = () => {
               </form>
             </Paper>
           </Grid>
-          
+
           <Grid item xs={12} md={5}>
-            <Paper sx={{ p: 4, height: '100%', bgcolor: 'background.default' }} elevation={0}>
+            <Paper ref={whyTeachRef} sx={{ p: 4, height: '100%', bgcolor: 'background.default', visibility: 'hidden' }} elevation={0}> {/* Add ref & start hidden */}
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <MonetizationOnIcon fontSize="large" color="primary" sx={{ mr: 2 }} />
                 <Typography variant="h5" gutterBottom>
@@ -295,8 +323,8 @@ const TeachPage = () => {
                   <ListItemIcon>
                     <CheckCircleOutlineIcon color="primary" />
                   </ListItemIcon>
-                  <ListItemText 
-                    primary="Flexible Schedule" 
+                  <ListItemText
+                    primary="Flexible Schedule"
                     secondary="Teach when it works for you - set your own hours and availability"
                   />
                 </ListItem>
@@ -304,8 +332,8 @@ const TeachPage = () => {
                   <ListItemIcon>
                     <CheckCircleOutlineIcon color="primary" />
                   </ListItemIcon>
-                  <ListItemText 
-                    primary="Earn Extra Income" 
+                  <ListItemText
+                    primary="Earn Extra Income"
                     secondary="Get paid for sharing your knowledge and skills with others"
                   />
                 </ListItem>
@@ -313,8 +341,8 @@ const TeachPage = () => {
                   <ListItemIcon>
                     <CheckCircleOutlineIcon color="primary" />
                   </ListItemIcon>
-                  <ListItemText 
-                    primary="Build Your Profile" 
+                  <ListItemText
+                    primary="Build Your Profile"
                     secondary="Enhance your resume and gain teaching experience"
                   />
                 </ListItem>
@@ -322,8 +350,8 @@ const TeachPage = () => {
                   <ListItemIcon>
                     <CheckCircleOutlineIcon color="primary" />
                   </ListItemIcon>
-                  <ListItemText 
-                    primary="Join a Community" 
+                  <ListItemText
+                    primary="Join a Community"
                     secondary="Connect with passionate learners and other skilled teachers"
                   />
                 </ListItem>
@@ -331,8 +359,8 @@ const TeachPage = () => {
                   <ListItemIcon>
                     <CheckCircleOutlineIcon color="primary" />
                   </ListItemIcon>
-                  <ListItemText 
-                    primary="Simple Process" 
+                  <ListItemText
+                    primary="Simple Process"
                     secondary="We handle the payments, scheduling and marketing for you"
                   />
                 </ListItem>
@@ -341,10 +369,10 @@ const TeachPage = () => {
           </Grid>
         </Grid>
       </Container>
-      
-      <Snackbar 
-        open={submitted} 
-        autoHideDuration={6000} 
+
+      <Snackbar
+        open={submitted}
+        autoHideDuration={6000}
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >

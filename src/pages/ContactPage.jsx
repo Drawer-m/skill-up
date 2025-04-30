@@ -1,12 +1,12 @@
-import { useState } from 'react';
-import { 
-  Box, 
-  Container, 
-  Typography, 
-  Grid, 
-  TextField, 
-  Button, 
-  Paper, 
+import { useState, useEffect, useRef } from 'react'; // Import hooks
+import {
+  Box,
+  Container,
+  Typography,
+  Grid,
+  TextField,
+  Button,
+  Paper,
   Alert,
   Snackbar,
   Card,
@@ -18,6 +18,7 @@ import EmailIcon from '@mui/icons-material/Email';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import PhoneIcon from '@mui/icons-material/Phone';
 import ContactSupportIcon from '@mui/icons-material/ContactSupport';
+import gsap from 'gsap'; // Import gsap
 
 const ContactPage = () => {
   const theme = useTheme();
@@ -29,7 +30,34 @@ const ContactPage = () => {
   });
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
-  
+
+  // Refs for animations
+  const titleRef = useRef(null);
+  const formRef = useRef(null);
+  const infoCardsRef = useRef([]);
+
+  // Animation Effect
+  useEffect(() => {
+    const tl = gsap.timeline({ defaults: { ease: 'power3.out', duration: 0.7 } });
+    const formElements = formRef.current ? formRef.current.querySelectorAll('.MuiGrid-item > .MuiTextField-root, .MuiGrid-item > .MuiButton-root') : [];
+
+    // Initial states
+    gsap.set(titleRef.current, { autoAlpha: 0, y: -30 });
+    gsap.set(formRef.current, { autoAlpha: 0, y: 50 });
+    gsap.set(infoCardsRef.current, { autoAlpha: 0, y: 50 });
+    gsap.set(formElements, { autoAlpha: 0, y: 20 });
+
+    // Animation sequence
+    tl.to(titleRef.current, { autoAlpha: 1, y: 0, duration: 0.6, delay: 0.1 })
+      .to(formRef.current, { autoAlpha: 1, y: 0, duration: 0.8 }, "-=0.4")
+      .to(formElements, { autoAlpha: 1, y: 0, stagger: 0.1 }, "-=0.6") // Stagger form fields
+      .to(infoCardsRef.current, { autoAlpha: 1, y: 0, stagger: 0.15, duration: 0.6 }, "-=0.5"); // Stagger info cards
+
+    return () => {
+      tl.kill();
+    };
+  }, []);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({
@@ -105,10 +133,10 @@ const ContactPage = () => {
   ];
 
   return (
-    <Box sx={{ py: 8 }}>
+    <Box sx={{ py: 8, overflow: 'hidden' }}> {/* Added overflow hidden */}
       <Container maxWidth="lg">
         <Grid container spacing={4} justifyContent="center">
-          <Grid item xs={12} textAlign="center">
+          <Grid item xs={12} textAlign="center" ref={titleRef} sx={{ visibility: 'hidden' }}> {/* Add ref & start hidden */}
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
               <ContactSupportIcon fontSize="large" color="primary" sx={{ mr: 2 }} />
               <Typography variant="h3" component="h1" gutterBottom>
@@ -121,9 +149,10 @@ const ContactPage = () => {
           </Grid>
           
           <Grid item xs={12} md={8}>
-            <Paper sx={{ p: 4 }} elevation={2}>
+            <Paper ref={formRef} sx={{ p: 4, visibility: 'hidden' }} elevation={2}> {/* Add ref & start hidden */}
               <form onSubmit={handleSubmit}>
                 <Grid container spacing={3}>
+                  {/* Wrap fields in Grid items for staggering */}
                   <Grid item xs={12} sm={6}>
                     <TextField
                       required
@@ -199,15 +228,17 @@ const ContactPage = () => {
             <Grid container spacing={3} justifyContent="center">
               {contactInfo.map((info, index) => (
                 <Grid item xs={12} sm={6} md={4} key={index}>
-                  <Card 
-                    sx={{ 
-                      height: '100%', 
+                  <Card
+                    ref={el => infoCardsRef.current[index] = el} // Add ref to array
+                    sx={{
+                      height: '100%',
                       textAlign: 'center',
                       transition: '0.3s',
                       '&:hover': {
                         transform: 'translateY(-5px)',
                         boxShadow: 3,
-                      }
+                      },
+                      visibility: 'hidden', // Start hidden
                     }}
                   >
                     <CardContent>
@@ -229,9 +260,9 @@ const ContactPage = () => {
         </Grid>
       </Container>
       
-      <Snackbar 
-        open={submitted} 
-        autoHideDuration={6000} 
+      <Snackbar
+        open={submitted}
+        autoHideDuration={6000}
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >

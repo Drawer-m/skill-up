@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'; // Import useState, useEffect
+import React, { useState, useEffect, useRef } from 'react'; // Added useRef
 import { useParams, Link as RouterLink } from 'react-router-dom';
 import { 
   Box, 
@@ -31,7 +31,8 @@ import PersonIcon from '@mui/icons-material/Person';
 import InfoIcon from '@mui/icons-material/Info';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'; // For enrolled status
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline'; // Use video icon again
-import { alpha } from '@mui/material/styles'; // Import alpha for gradient
+import { alpha } from '@mui/material/styles';
+import gsap from 'gsap'; // Import gsap
 
 const CourseDetailPage = () => {
   const { courseId } = useParams();
@@ -41,7 +42,12 @@ const CourseDetailPage = () => {
   // State for enrollment status and dialogs
   const [enrolled, setEnrolled] = useState(false);
   const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
-  const [unenrollDialogOpen, setUnenrollDialogOpen] = useState(false); // State for unenroll dialog
+  const [unenrollDialogOpen, setUnenrollDialogOpen] = useState(false);
+
+  // Refs for animations
+  const leftColRef = useRef(null);
+  const rightColRef = useRef(null);
+  const backButtonRef = useRef(null);
 
   // Check enrollment status on mount and when localStorage changes
   useEffect(() => {
@@ -50,15 +56,33 @@ const CourseDetailPage = () => {
     const handleStorageChange = () => {
       setEnrolled(isEnrolled(parseInt(courseId)));
     };
-
-    // Listen for custom event (or storage event if preferred)
     window.addEventListener('enrollmentChanged', handleStorageChange);
-
-    // Cleanup listener
     return () => {
       window.removeEventListener('enrollmentChanged', handleStorageChange);
     };
   }, [courseId]);
+
+  // Animation Effect
+  useEffect(() => {
+    if (!course) return; // Don't run animation if course not found
+
+    const tl = gsap.timeline({ defaults: { ease: 'power3.out', duration: 0.7 } });
+
+    // Initial states
+    gsap.set(backButtonRef.current, { autoAlpha: 0, x: -20 });
+    gsap.set(leftColRef.current, { autoAlpha: 0, x: -40 });
+    gsap.set(rightColRef.current, { autoAlpha: 0, x: 40 });
+
+    // Animation sequence
+    tl.to(backButtonRef.current, { autoAlpha: 1, x: 0, duration: 0.5, delay: 0.1 })
+      .to(leftColRef.current, { autoAlpha: 1, x: 0 }, "-=0.3")
+      .to(rightColRef.current, { autoAlpha: 1, x: 0 }, "-=0.5");
+
+    return () => {
+      tl.kill();
+    };
+  }, [course]); // Rerun if course changes (though unlikely on this page)
+
 
   if (!course) {
     return (
@@ -73,66 +97,46 @@ const CourseDetailPage = () => {
     );
   }
 
-  const handleEnrollClick = () => {
-    setEnrollDialogOpen(true);
-  };
-
-  const handleEnrollDialogClose = () => {
-    setEnrollDialogOpen(false);
-  };
-
-  const handleConfirmEnroll = () => {
-    enrollCourse(parseInt(courseId));
-    setEnrolled(true); // Update local state immediately
-    setEnrollDialogOpen(false);
-  };
-
-  // --- Unenroll Handlers ---
-  const handleUnenrollClick = () => {
-    setUnenrollDialogOpen(true); // Open unenroll dialog
-  };
-
-  const handleUnenrollDialogClose = () => {
-    setUnenrollDialogOpen(false);
-  };
-
-  const handleConfirmUnenroll = () => {
-    unenrollCourse(parseInt(courseId)); // Call unenroll function
-    setEnrolled(false); // Update local state immediately
-    setUnenrollDialogOpen(false);
-  };
+  const handleEnrollClick = () => setEnrollDialogOpen(true);
+  const handleEnrollDialogClose = () => setEnrollDialogOpen(false);
+  const handleConfirmEnroll = () => { /* ... */ enrollCourse(parseInt(courseId)); setEnrolled(true); setEnrollDialogOpen(false); };
+  const handleUnenrollClick = () => setUnenrollDialogOpen(true);
+  const handleUnenrollDialogClose = () => setUnenrollDialogOpen(false);
+  const handleConfirmUnenroll = () => { /* ... */ unenrollCourse(parseInt(courseId)); setEnrolled(false); setUnenrollDialogOpen(false); };
 
   // Determine color based on category for consistency
-  const categoryColor = course.category === 'coding' ? theme.palette.primary.dark : 
-                        course.category === 'art' ? theme.palette.secondary.dark : 
+  const categoryColor = course.category === 'coding' ? theme.palette.primary.dark :
+                        course.category === 'art' ? theme.palette.secondary.dark :
                         course.category === 'music' ? theme.palette.info.dark : theme.palette.success.dark;
-  
-  const categoryLightColor = course.category === 'coding' ? theme.palette.primary.light : 
-                             course.category === 'art' ? theme.palette.secondary.light : 
+
+  const categoryLightColor = course.category === 'coding' ? theme.palette.primary.light :
+                             course.category === 'art' ? theme.palette.secondary.light :
                              course.category === 'music' ? theme.palette.info.light : theme.palette.success.light;
 
+
   return (
-    <Box sx={{ py: { xs: 4, md: 8 }, bgcolor: 'background.default' }}> {/* Adjusted padding */}
+    <Box sx={{ py: { xs: 4, md: 8 }, bgcolor: 'background.default', overflow: 'hidden' }}> {/* Added overflow hidden */}
       <Container maxWidth="lg">
         {/* Back Button */}
-        <Button 
-          component={RouterLink} 
-          to="/courses" 
-          startIcon={<ArrowBackIcon />} 
-          sx={{ mb: 3, color: 'text.secondary', '&:hover': { bgcolor: alpha(theme.palette.text.secondary, 0.08) } }} // Added hover effect
+        <Button
+          ref={backButtonRef} // Add ref
+          component={RouterLink}
+          to="/courses"
+          startIcon={<ArrowBackIcon />}
+          sx={{ mb: 3, color: 'text.secondary', '&:hover': { bgcolor: alpha(theme.palette.text.secondary, 0.08) }, visibility: 'hidden' }} // Start hidden
         >
           Back to Courses
         </Button>
 
         <Grid container spacing={4}>
           {/* Left Column: Main Info & Syllabus */}
-          <Grid item xs={12} md={8}>
-            <Paper elevation={3} sx={{ overflow: 'hidden', borderRadius: 2 }}> {/* Increased elevation */}
+          <Grid item xs={12} md={8} ref={leftColRef} sx={{ visibility: 'hidden' }}> {/* Add ref & start hidden */}
+            <Paper elevation={3} sx={{ overflow: 'hidden', borderRadius: 2 }}>
               {/* Header with Icon */}
-              <Box sx={{ 
+              <Box sx={{
                 p: { xs: 3, md: 4 }, // Responsive padding
                 // Apply a subtle gradient
-                background: `linear-gradient(135deg, ${categoryColor} 30%, ${alpha(categoryColor, 0.8)} 90%)`, 
+                background: `linear-gradient(135deg, ${categoryColor} 30%, ${alpha(categoryColor, 0.8)} 90%)`,
                 color: 'background.paper', // Default text color for this box is already off-white
                 display: 'flex',
                 alignItems: 'flex-end', // Changed to 'flex-end'
@@ -140,18 +144,18 @@ const CourseDetailPage = () => {
               }}>
                 {renderCourseIcon(course.iconType, 50)}
                 <Box>
-                  <Chip 
-                    label={course.category.charAt(0).toUpperCase() + course.category.slice(1)} 
-                    size="small" 
-                    sx={{ 
+                  <Chip
+                    label={course.category.charAt(0).toUpperCase() + course.category.slice(1)}
+                    size="small"
+                    sx={{
                       bgcolor: 'rgba(255, 255, 255, 0.25)', // Slightly more opaque
                       color: 'white', // Keep chip text white for contrast on chip background
                       mb: 1,
                       fontWeight: 600,
-                    }} 
+                    }}
                   />
                   {/* Ensure title uses the box's default color (background.paper) */}
-                  <Typography variant="h4" component="h1" fontWeight="bold" sx={{ color: 'inherit' }}> 
+                  <Typography variant="h4" component="h1" fontWeight="bold" sx={{ color: 'inherit' }}>
                     {course.title}
                   </Typography>
                 </Box>
@@ -163,7 +167,7 @@ const CourseDetailPage = () => {
                 <Typography variant="body1" color="text.secondary" paragraph>
                   {course.description}
                 </Typography>
-                
+
                 <Divider sx={{ my: 3 }} />
 
                 {/* Syllabus */}
@@ -192,7 +196,7 @@ const CourseDetailPage = () => {
                   <Typography variant="body2" sx={{ mb: 2 }} color="text.secondary"> {/* Increased margin bottom */}
                     Welcome to the course! Here's an introductory video to get you started:
                   </Typography>
-                  <Box 
+                  <Box
                     component="iframe"
                     width="100%"
                     height="315" // Standard 16:9 aspect ratio height for full width
@@ -206,49 +210,48 @@ const CourseDetailPage = () => {
                 </Box>
               )}
               {/* --- END CONDITIONAL INTRODUCTION VIDEO SECTION --- */}
-
             </Paper>
           </Grid>
 
           {/* Right Column: Price, Details, Teacher */}
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={4} ref={rightColRef} sx={{ visibility: 'hidden' }}> {/* Add ref & start hidden */}
             {/* Enroll Card */}
             <Paper elevation={3} sx={{ p: 3, mb: 3, borderRadius: 2, border: `2px solid ${categoryColor}`, boxShadow: `0 4px 12px ${alpha(categoryColor, 0.2)}` }}> {/* Increased elevation, added shadow */}
               <Typography variant="h4" color={categoryColor} fontWeight="bold" gutterBottom>
                 ${course.price}
               </Typography>
               {enrolled ? (
-                 <Button 
-                    fullWidth 
-                    variant="contained" 
-                    size="large" 
-                    onClick={handleUnenrollClick} 
+                 <Button
+                    fullWidth
+                    variant="contained"
+                    size="large"
+                    onClick={handleUnenrollClick}
                     startIcon={<CheckCircleIcon />}
-                    sx={{ 
-                      mb: 2, 
+                    sx={{
+                      mb: 2,
                       py: 1.5,
-                      bgcolor: 'success.dark', 
-                      color: 'white', 
-                      '&:hover': { 
+                      bgcolor: 'success.dark',
+                      color: 'white',
+                      '&:hover': {
                         bgcolor: 'success.main',
                       }
                     }}
                   >
-                    Enrolled (Click to Unenroll) 
+                    Enrolled (Click to Unenroll)
                   </Button>
               ) : (
-                <Button 
-                  fullWidth 
-                  variant="contained" 
-                  size="large" 
-                  onClick={handleEnrollClick} 
-                  sx={{ 
-                    mb: 2, 
+                <Button
+                  fullWidth
+                  variant="contained"
+                  size="large"
+                  onClick={handleEnrollClick}
+                  sx={{
+                    mb: 2,
                     py: 1.5,
                     bgcolor: categoryColor,
                     '&:hover': {
                       // Use alpha for hover brightness adjustment
-                      bgcolor: alpha(categoryColor, 0.85), 
+                      bgcolor: alpha(categoryColor, 0.85),
                     }
                   }}
                 >
@@ -336,7 +339,7 @@ const CourseDetailPage = () => {
           <Button onClick={handleUnenrollDialogClose} color="primary">
             Cancel
           </Button>
-          <Button onClick={handleConfirmUnenroll} color="secondary" autoFocus> 
+          <Button onClick={handleConfirmUnenroll} color="secondary" autoFocus>
             Confirm Unenroll
           </Button>
         </DialogActions>

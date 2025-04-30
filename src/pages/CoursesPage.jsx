@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'; 
+import { useState, useEffect, useRef } from 'react'; // Added useRef
 import React from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { 
@@ -21,21 +21,28 @@ import {
   Avatar,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import { courses, categories, renderCourseIcon, getEnrolledCourses } from '../data/courses.jsx'; 
-import CheckCircleIcon from '@mui/icons-material/CheckCircle'; 
+import { courses, categories, renderCourseIcon, getEnrolledCourses } from '../data/courses.jsx';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import gsap from 'gsap'; // Import gsap
 
 const CoursesPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('all');
-  const [dataVersion, setDataVersion] = useState(0); 
+  const [dataVersion, setDataVersion] = useState(0);
+
+  // Refs for animations
+  const filterBoxRef = useRef(null);
+  const courseGridRef = useRef(null);
+  const courseCardsRef = useRef([]); // Use an array for cards
 
   useEffect(() => {
+    // ... existing useEffect for data changes ...
     const handleDataChange = () => {
-      setDataVersion(prev => prev + 1); 
+      setDataVersion(prev => prev + 1);
     };
     window.addEventListener('enrollmentChanged', handleDataChange);
-    window.addEventListener('coursesUpdated', handleDataChange); 
-    
+    window.addEventListener('coursesUpdated', handleDataChange);
+
     return () => {
       window.removeEventListener('enrollmentChanged', handleDataChange);
       window.removeEventListener('coursesUpdated', handleDataChange);
@@ -54,10 +61,37 @@ const CoursesPage = () => {
     .sort((a, b) => {
       const aEnrolled = enrolledIds.includes(a.id);
       const bEnrolled = enrolledIds.includes(b.id);
-      if (aEnrolled && !bEnrolled) return -1; 
-      if (!aEnrolled && bEnrolled) return 1;  
-      return a.id - b.id; 
+      if (aEnrolled && !bEnrolled) return -1;
+      if (!aEnrolled && bEnrolled) return 1;
+      return a.id - b.id;
     });
+
+  // Animation Effect
+  useEffect(() => {
+    const tl = gsap.timeline({ defaults: { ease: 'power3.out', duration: 0.6 } });
+
+    // Animate Filter Box
+    gsap.set(filterBoxRef.current, { autoAlpha: 0, y: -30 });
+    tl.to(filterBoxRef.current, { autoAlpha: 1, y: 0, delay: 0.2 });
+
+    // Animate Course Cards (on initial load/filter change)
+    // Reset refs array length
+    courseCardsRef.current = courseCardsRef.current.slice(0, filteredCourses.length);
+
+    gsap.set(courseCardsRef.current, { autoAlpha: 0, y: 40 });
+    tl.to(courseCardsRef.current, {
+      autoAlpha: 1,
+      y: 0,
+      stagger: 0.1,
+      duration: 0.5
+    }, "-=0.4"); // Overlap animation slightly
+
+    return () => {
+      tl.kill();
+      gsap.killTweensOf(courseCardsRef.current);
+    };
+    // Rerun animation when filtered courses change
+  }, [filteredCourses.length]); // Dependency on the number of courses
 
   return (
     <Box sx={{ py: 8, borderColor: 'divider' }}>
@@ -66,15 +100,17 @@ const CoursesPage = () => {
           Available Courses
         </Typography>
 
-        <Box 
-          sx={{ 
+        <Box
+          ref={filterBoxRef} // Add ref
+          sx={{
             mb: 6, 
             p: 3, 
             borderRadius: 2,
             background: 'linear-gradient(to right, rgba(122, 102, 122, 0.15), rgba(156, 131, 153, 0.12))',
             border: '1px solid',
             borderColor: 'primary.dark',
-            boxShadow: '0 4px 12px rgba(122, 102, 122, 0.1)'
+            boxShadow: '0 4px 12px rgba(122, 102, 122, 0.1)',
+            visibility: 'hidden', // Start hidden
           }}
         >
           <Grid container spacing={3} alignItems="center">
@@ -153,8 +189,8 @@ const CoursesPage = () => {
         </Box>
 
         {filteredCourses.length > 0 ? (
-          <Grid container spacing={4}>
-            {filteredCourses.map((course) => {
+          <Grid ref={courseGridRef} container spacing={4}>
+            {filteredCourses.map((course, index) => { // Add index
               const enrolled = enrolledIds.includes(course.id);
               const categoryColor = course.category === 'coding' ? 'primary.dark' : 
                                     course.category === 'art' ? 'secondary.dark' : 
@@ -162,8 +198,9 @@ const CoursesPage = () => {
               
               return (
                 <Grid item key={course.id} xs={12} sm={6} md={4} lg={3}>
-                  <Card 
-                    sx={{ 
+                  <Card
+                    ref={el => courseCardsRef.current[index] = el} // Add ref to array
+                    sx={{
                       height: '100%', 
                       display: 'flex', 
                       flexDirection: 'column',
@@ -178,27 +215,28 @@ const CoursesPage = () => {
                         transform: 'translateY(-5px)',
                         boxShadow: 3,
                         borderColor: enrolled ? 'success.dark' : 'primary.light',
-                      }
+                      },
+                      visibility: 'hidden', // Start hidden
                     }}
                   >
                     {enrolled && (
-                      <Chip 
+                      <Chip
                         icon={<CheckCircleIcon fontSize="small" />}
-                        label="Enrolled" 
-                        size="small" 
+                        label="Enrolled"
+                        size="small"
                         color="success"
-                        sx={{ 
-                          position: 'absolute', 
-                          top: 8, 
-                          right: 8, 
+                        sx={{
+                          position: 'absolute',
+                          top: 8,
+                          right: 8,
                           zIndex: 1,
                           bgcolor: 'success.main',
                           color: 'white',
                           '.MuiChip-icon': { color: 'white' }
-                        }} 
+                        }}
                       />
                     )}
-                    <Box sx={{ 
+                    <Box sx={{
                       bgcolor: categoryColor,
                       p: 3,
                       display: 'flex',
@@ -214,10 +252,10 @@ const CoursesPage = () => {
                         {course.title}
                       </Typography>
                       <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-                        <Avatar 
-                          sx={{ 
-                            width: 24, 
-                            height: 24, 
+                        <Avatar
+                          sx={{
+                            width: 24,
+                            height: 24,
                             fontSize: '0.75rem',
                             bgcolor: 'primary.dark',
                             border: '1px solid',
@@ -231,7 +269,7 @@ const CoursesPage = () => {
                         </Typography>
                       </Stack>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Chip 
+                        <Chip
                           label={course.category.charAt(0).toUpperCase() + course.category.slice(1)} 
                           size="small" 
                           variant="outlined"
@@ -253,9 +291,9 @@ const CoursesPage = () => {
                       </Box>
                     </CardContent>
                     <CardActions sx={{ borderTop: '1px solid', borderColor: 'divider', p: 2 }}>
-                      <Button 
-                        fullWidth 
-                        variant="contained" 
+                      <Button
+                        fullWidth
+                        variant="contained"
                         size="medium"
                         component={RouterLink}
                         to={`/courses/${course.id}`}
@@ -280,9 +318,9 @@ const CoursesPage = () => {
         ) : (
           <Box sx={{ py: 4, textAlign: 'center', border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 3 }}>
             <Typography variant="h6">No courses found matching your criteria</Typography>
-            <Button 
-              variant="outlined" 
-              sx={{ 
+            <Button
+              variant="outlined"
+              sx={{
                 mt: 2,
                 border: '1px solid',
                 borderColor: 'primary.dark',
