@@ -29,6 +29,7 @@ const CoursesPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('all');
   const [dataVersion, setDataVersion] = useState(0);
+  const [initialAnimationDone, setInitialAnimationDone] = useState(false);
 
   // Refs for animations
   const titleRef = useRef(null);
@@ -75,45 +76,65 @@ const CoursesPage = () => {
     while (cardRefs.current.length < filteredCourses.length) {
       cardRefs.current.push(null);
     }
+
+    // Only animate the cards when filteredCourses changes
+    if (initialAnimationDone) {
+      animateCards();
+    }
   }, [filteredCourses]);
 
-  // Enhanced Animation Effect - Run only once on mount
+  // Function to animate only the course cards
+  const animateCards = () => {
+    // Filter out null refs
+    const validCardRefs = cardRefs.current.filter(ref => ref !== null);
+    
+    if (validCardRefs.length > 0) {
+      // Set initial state for cards
+      gsap.set(validCardRefs, { autoAlpha: 0, y: 50 });
+      
+      // Animate cards with a stagger
+      gsap.to(validCardRefs, { 
+        autoAlpha: 1, 
+        y: 0, 
+        duration: 0.5,
+        stagger: 0.05, 
+      });
+    }
+    
+    // Handle no results container
+    if (filteredCourses.length === 0 && courseGridRef.current) {
+      gsap.set(courseGridRef.current, { autoAlpha: 0 });
+      gsap.to(courseGridRef.current, { autoAlpha: 1, duration: 0.5 });
+    }
+  };
+
+  // Enhanced Animation Effect - Run only once on mount for the layout elements
   useEffect(() => {
+    // Only run this once
+    if (initialAnimationDone) return;
+    
     // Initialize the timeline
     const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
 
-    // Set initial states
+    // Set initial states for layout elements
     gsap.set(titleRef.current, { autoAlpha: 0, y: -30 });
     gsap.set(filterBoxRef.current, { autoAlpha: 0, y: 30 });
     
     // Animate the title and filter box
     tl.to(titleRef.current, { autoAlpha: 1, y: 0, duration: 0.7, delay: 0.1 })
-      .to(filterBoxRef.current, { autoAlpha: 1, y: 0, duration: 0.7 }, "-=0.5");
-      
-    // Setup cards for staggered animation
-    if (cardRefs.current.length > 0) {
-      // Filter out null refs
-      const validCardRefs = cardRefs.current.filter(ref => ref !== null);
-      
-      if (validCardRefs.length > 0) {
-        // Set initial state for cards
-        gsap.set(validCardRefs, { autoAlpha: 0, y: 50 });
-        
-        // Add card animations to the timeline with a stagger for a cascade effect
-        tl.to(validCardRefs, { 
-          autoAlpha: 1, 
-          y: 0, 
-          duration: 0.5,
-          stagger: 0.1, // Adjust stagger timing for smoother effect
-        }, "-=0.2");
-      }
-    }
+      .to(filterBoxRef.current, { autoAlpha: 1, y: 0, duration: 0.7 }, "-=0.5")
+      .call(() => {
+        // After initial layout animation is complete, animate the cards
+        animateCards();
+        // Mark initial animation as done
+        setInitialAnimationDone(true);
+      });
     
     // Cleanup function
     return () => {
       tl.kill();
     };
-  }, [dataVersion]); // Re-run when data changes to animate new cards
+  }, []);
 
   return (
     <Box sx={{ py: 8, borderColor: 'divider' }}>
