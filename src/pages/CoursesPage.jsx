@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'; // Ensure useRef is imported
+import { useState, useEffect, useRef } from 'react';
 import React from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { 
@@ -23,20 +23,20 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import { courses, categories, renderCourseIcon, getEnrolledCourses } from '../data/courses.jsx';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import gsap from 'gsap'; // Re-import gsap
+import gsap from 'gsap';
 
 const CoursesPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('all');
   const [dataVersion, setDataVersion] = useState(0);
 
-  // Re-add animation refs
+  // Refs for animations
+  const titleRef = useRef(null);
   const filterBoxRef = useRef(null);
   const courseGridRef = useRef(null);
-  const hasAnimated = useRef(false); // Flag to track initial animation
+  const cardRefs = useRef([]);
 
   useEffect(() => {
-    // ... existing useEffect for data changes ...
     const handleDataChange = () => {
       setDataVersion(prev => prev + 1);
     };
@@ -66,64 +66,69 @@ const CoursesPage = () => {
       return a.id - b.id;
     });
 
-  // Animation Effect - Run only once on mount
+  // Ensure cardRefs array is updated when filteredCourses changes
   useEffect(() => {
-    // Get refs immediately
-    const filterElement = filterBoxRef.current;
-    const gridElement = courseGridRef.current;
-    let tl; // Define timeline variable in the outer scope of useEffect
+    // Reset the refs array to match the number of courses
+    cardRefs.current = cardRefs.current.slice(0, filteredCourses.length);
+    
+    // Fill any empty slots with null
+    while (cardRefs.current.length < filteredCourses.length) {
+      cardRefs.current.push(null);
+    }
+  }, [filteredCourses]);
 
-    // Only proceed if the filter element exists
-    if (filterElement) {
-      // Initialize timeline only if we are going to use it
-      tl = gsap.timeline({ defaults: { ease: 'power3.out', duration: 0.6 } });
+  // Enhanced Animation Effect - Run only once on mount
+  useEffect(() => {
+    // Initialize the timeline
+    const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
 
-      // Animate Filter Box using fromTo
-      tl.fromTo(filterElement,
-        { autoAlpha: 0, y: -30 }, // from state (autoAlpha handles visibility)
-        { autoAlpha: 1, y: 0, delay: 0.1 } // to state
-      );
-
-      // Animate Cards if grid element exists at this point
-      // Check gridElement *inside* the timeline setup if it might render later
-      // For simplicity, we assume it exists if filterElement exists and courses are present
-      if (gridElement) {
-        const cards = gridElement.children;
-        if (cards.length > 0) {
-          const cardElements = Array.from(cards).map(gridItem => gridItem.firstChild).filter(el => el);
-          if (cardElements.length > 0) {
-            // Add card animation to the same timeline
-            tl.fromTo(cardElements,
-              { autoAlpha: 0, y: 40 }, // from state (autoAlpha handles visibility)
-              {
-                autoAlpha: 1,
-                y: 0,
-                stagger: 0.08,
-                duration: 0.4
-              }, // to state
-              "-=0.3" // Overlap timing
-            );
-          }
-        }
+    // Set initial states
+    gsap.set(titleRef.current, { autoAlpha: 0, y: -30 });
+    gsap.set(filterBoxRef.current, { autoAlpha: 0, y: 30 });
+    
+    // Animate the title and filter box
+    tl.to(titleRef.current, { autoAlpha: 1, y: 0, duration: 0.7, delay: 0.1 })
+      .to(filterBoxRef.current, { autoAlpha: 1, y: 0, duration: 0.7 }, "-=0.5");
+      
+    // Setup cards for staggered animation
+    if (cardRefs.current.length > 0) {
+      // Filter out null refs
+      const validCardRefs = cardRefs.current.filter(ref => ref !== null);
+      
+      if (validCardRefs.length > 0) {
+        // Set initial state for cards
+        gsap.set(validCardRefs, { autoAlpha: 0, y: 50 });
+        
+        // Add card animations to the timeline with a stagger for a cascade effect
+        tl.to(validCardRefs, { 
+          autoAlpha: 1, 
+          y: 0, 
+          duration: 0.5,
+          stagger: 0.1, // Adjust stagger timing for smoother effect
+        }, "-=0.2");
       }
     }
-
+    
     // Cleanup function
     return () => {
-      if (tl) {
-        tl.kill();
-      }
+      tl.kill();
     };
-  }, []); // Runs once on mount
+  }, [dataVersion]); // Re-run when data changes to animate new cards
 
   return (
     <Box sx={{ py: 8, borderColor: 'divider' }}>
       <Container maxWidth="lg">
-        <Typography variant="h3" component="h1" gutterBottom sx={{ mb: 4 }}>
+        <Typography 
+          ref={titleRef}
+          variant="h3" 
+          component="h1" 
+          gutterBottom 
+          sx={{ mb: 4, visibility: 'hidden' }}
+        >
           Available Courses
         </Typography>
 
-        {/* START: Filter Box */}
+        {/* Filter Box */}
         <Box
           ref={filterBoxRef}
           sx={{
@@ -134,12 +139,10 @@ const CoursesPage = () => {
             border: '1px solid',
             borderColor: 'primary.dark',
             boxShadow: '0 4px 12px rgba(122, 102, 122, 0.1)',
-            visibility: 'hidden', // Keep hidden initially for filter box animation
+            visibility: 'hidden',
           }}
         >
-          {/* ... Grid container for TextField and Select ... */}
           <Grid container spacing={3} alignItems="center">
-            {/* ... Search TextField Grid item ... */}
             <Grid item xs={12} md={8}>
               <Typography variant="body1" fontWeight={600} sx={{ mb: 1, color: 'primary.dark' }}>
                 Search Courses
@@ -177,7 +180,6 @@ const CoursesPage = () => {
                 }}
               />
             </Grid>
-            {/* ... Category Select Grid item ... */}
             <Grid item xs={12} md={4}>
               <Typography variant="body1" fontWeight={600} sx={{ mb: 1, color: 'primary.dark' }}>
                 Filter by Category
@@ -214,8 +216,6 @@ const CoursesPage = () => {
             </Grid>
           </Grid>
         </Box>
-        {/* END: Filter Box */}
-
 
         {filteredCourses.length > 0 ? (
           <Grid
@@ -223,7 +223,7 @@ const CoursesPage = () => {
             container
             spacing={4}
           >
-            {filteredCourses.map((course) => {
+            {filteredCourses.map((course, index) => {
               const enrolled = enrolledIds.includes(course.id);
               const categoryColor = course.category === 'coding' ? 'primary.dark' : 
                                    course.category === 'art' ? 'secondary.dark' : 
@@ -232,6 +232,7 @@ const CoursesPage = () => {
               return (
                 <Grid item key={course.id} xs={12} sm={6} md={4} lg={3}>
                   <Card
+                    ref={el => cardRefs.current[index] = el}
                     sx={{
                       height: '100%',
                       display: 'flex',
@@ -243,6 +244,7 @@ const CoursesPage = () => {
                       overflow: 'hidden',
                       position: 'relative',
                       bgcolor: enrolled ? 'success.lightest' : 'background.paper',
+                      visibility: 'hidden', // Start hidden for GSAP
                       '&:hover': {
                         transform: 'translateY(-5px)',
                         boxShadow: 3,
@@ -347,7 +349,18 @@ const CoursesPage = () => {
             })}
           </Grid>
         ) : (
-          <Box sx={{ py: 4, textAlign: 'center', border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 3 }}>
+          <Box 
+            ref={el => courseGridRef.current = el}
+            sx={{ 
+              py: 4, 
+              textAlign: 'center', 
+              border: '1px solid', 
+              borderColor: 'divider', 
+              borderRadius: 2, 
+              p: 3,
+              opacity: 0 // Start hidden for GSAP
+            }}
+          >
             <Typography variant="h6">No courses found matching your criteria</Typography>
             <Button
               variant="outlined"

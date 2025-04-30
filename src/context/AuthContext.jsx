@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react'; // Added useEffect
 
 const AuthContext = createContext(null);
 
@@ -9,42 +9,64 @@ const dummyUsers = {
   student: { password: 'student123', role: 'pupil' }, // Added student user
 };
 
+const USER_STORAGE_KEY = 'skillup_user'; // Key for localStorage
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null); // user will be { username: string, role: 'teacher' | 'pupil' } or null
+  // Initialize user state from localStorage
+  const [user, setUser] = useState(() => {
+    const storedUser = localStorage.getItem(USER_STORAGE_KEY);
+    try {
+      return storedUser ? JSON.parse(storedUser) : null;
+    } catch (error) {
+      console.error("Failed to parse user from localStorage:", error);
+      localStorage.removeItem(USER_STORAGE_KEY); // Clear invalid data
+      return null;
+    }
+  });
   const [error, setError] = useState(null); // State for login errors
+
+  // Effect to update localStorage when user state changes
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+    } else {
+      localStorage.removeItem(USER_STORAGE_KEY);
+    }
+  }, [user]);
 
   const login = (username, password) => {
     setError(null); // Clear previous errors
-    console.log('Login attempt:', { username, password }); // Add this line for debugging
+    console.log('Login attempt:', { username, password });
     const userData = dummyUsers[username];
 
     if (userData && userData.password === password) {
-      console.log('Login successful for:', username); // Add this line
+      console.log('Login successful for:', username);
       const loggedInUser = { username, role: userData.role };
-      setUser(loggedInUser);
+      setUser(loggedInUser); // Update state, which triggers useEffect to save to localStorage
       return loggedInUser; // Return the user object on success
     } else {
-      console.log('Login failed for:', username); // Add this line
+      console.log('Login failed for:', username);
       setError('Invalid username or password.');
-      setUser(null);
+      setUser(null); // Update state, which triggers useEffect to remove from localStorage
       return null; // Return null on failure
     }
   };
 
   const logout = () => {
-    setUser(null);
+    setUser(null); // Update state, which triggers useEffect to remove from localStorage
     setError(null);
-    // navigate('/login'); // Navigation should be handled in the component calling logout
+    // Clear teacher-specific courses on logout as well
+    Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('teacher_') && key.endsWith('_courses')) {
+            localStorage.removeItem(key);
+        }
+    });
   };
 
-  // Dummy signup function (replace with actual API call)
+  // Dummy signup function
   const signup = (username, password, role) => {
+    // ... existing signup code ...
     console.log(`Signup attempt: User: ${username}, Role: ${role}`);
-    // In a real app:
-    // 1. Check if username exists
-    // 2. Call API to register user
-    // 3. Handle success/error
-    // For now, just log and maybe add to dummyUsers if needed for testing
     if (!dummyUsers[username]) {
       dummyUsers[username] = { password, role };
       console.log('Dummy user added:', username);
