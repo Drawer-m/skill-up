@@ -154,7 +154,6 @@ const CourseDetailPage = () => {
                       fontWeight: 600,
                     }}
                   />
-                  {/* Ensure title uses the box's default color (background.paper) */}
                   <Typography variant="h4" component="h1" fontWeight="bold" sx={{ color: 'inherit' }}>
                     {course.title}
                   </Typography>
@@ -193,52 +192,71 @@ const CourseDetailPage = () => {
                       Course Introduction Video
                     </Typography>
                   </Box>
-                  <Typography variant="body2" sx={{ mb: 2 }} color="text.secondary"> {/* Increased margin bottom */}
-                    Welcome to the course! Here's an introductory video to get you started:
-                  </Typography>
                   <Box
                     component="iframe"
                     width="100%"
-                    height="315" // Standard 16:9 aspect ratio height for full width
+                    height={{ xs: "240px", md: "450px" }}
                     src={course.introVideoUrl}
                     title="Course Introduction Video"
                     frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
-                    sx={{ borderRadius: 1, display: 'block', maxWidth: '560px', mx: 'auto', border: `1px solid ${theme.palette.divider}` }} // Added border
+                    sx={{ borderRadius: 1 }}
                   />
                 </Box>
               )}
-              {/* --- END CONDITIONAL INTRODUCTION VIDEO SECTION --- */}
             </Paper>
           </Grid>
 
-          {/* Right Column: Price, Details, Teacher */}
+          {/* Right Column: Enrollment & Details */}
           <Grid item xs={12} md={4} ref={rightColRef} sx={{ visibility: 'hidden' }}> {/* Add ref & start hidden */}
             {/* Enroll Card */}
             <Paper elevation={3} sx={{ p: 3, mb: 3, borderRadius: 2, border: `2px solid ${categoryColor}`, boxShadow: `0 4px 12px ${alpha(categoryColor, 0.2)}` }}> {/* Increased elevation, added shadow */}
               <Typography variant="h4" color={categoryColor} fontWeight="bold" gutterBottom>
                 ${course.price}
               </Typography>
+              
               {enrolled ? (
-                 <Button
+                <>
+                  <Button
                     fullWidth
                     variant="contained"
+                    size="large"
+                    component={RouterLink}
+                    to={`/courses/${course.id}/learn`}
+                    startIcon={<PlayCircleOutlineIcon />}
+                    sx={{
+                      mb: 2,
+                      py: 1.5,
+                      bgcolor: theme.palette.success.main,
+                      color: 'white',
+                      '&:hover': {
+                        bgcolor: theme.palette.success.dark,
+                      }
+                    }}
+                  >
+                    Access Course
+                  </Button>
+                  <Button
+                    fullWidth
+                    variant="outlined"
                     size="large"
                     onClick={handleUnenrollClick}
                     startIcon={<CheckCircleIcon />}
                     sx={{
                       mb: 2,
                       py: 1.5,
-                      bgcolor: 'success.dark',
-                      color: 'white',
+                      color: theme.palette.success.main,
+                      borderColor: theme.palette.success.main,
                       '&:hover': {
-                        bgcolor: 'success.main',
+                        borderColor: theme.palette.success.main,
+                        bgcolor: alpha(theme.palette.success.main, 0.05),
                       }
                     }}
                   >
-                    Enrolled (Click to Unenroll)
+                    Unenroll
                   </Button>
+                </>
               ) : (
                 <Button
                   fullWidth
