@@ -11,7 +11,7 @@ import ContactPage from './pages/ContactPage';
 import CourseDetailPage from './pages/CourseDetailPage';
 import CourseViewPage from './pages/CourseViewPage';
 import LoginPage from './pages/LoginPage';
-import SignupPage from './pages/SignupPage';
+import SignUpPage from './pages/SignUpPage'; // Fixed capitalization of 'U' in 'SignUp'
 import ProfilePage from './pages/ProfilePage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import TeacherDashboardPage from './pages/TeacherDashboardPage';
@@ -32,12 +32,12 @@ function App() {
             <Route path="/courses/:courseId" element={<CourseDetailPage />} />
             <Route path="/courses/:courseId/learn" element={<CourseViewPage />} />
             <Route path="/teach" element={<TeachPage />} />
-            <Route path="/teacher/dashboard" element={<TeacherDashboardPage />} /> {/* Update path to match Login redirect */}
-            <Route path="/dashboard" element={<TeacherDashboardPage />} /> {/* Keep the old path for backward compatibility */}
+            <Route path="/teacher/dashboard" element={<TeacherDashboardPage />} />
+            <Route path="/dashboard" element={<TeacherDashboardPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
-            <Route path="/contact" element={<ContactPage />} /> {/* Add missing contact route */}
+            <Route path="/signup" element={<SignUpPage />} /> {/* Also update the component name here */}
+            <Route path="/contact" element={<ContactPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
           </Routes>
           <Footer />
